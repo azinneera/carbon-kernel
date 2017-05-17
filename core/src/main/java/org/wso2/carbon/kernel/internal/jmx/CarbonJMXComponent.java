@@ -57,6 +57,7 @@ public class CarbonJMXComponent {
     private JMXConnectorServer jmxConnectorServer;
     private Registry rmiRegistry;
     private CarbonRuntime carbonRuntime;
+    private static final String ACCESS_FILE_PATH = System.getProperty("com.sun.management.jmxremote.access.file");
 
     /**
      * This is the activation method of CarbonJMXComponent. This will be called when all the references are
@@ -101,6 +102,7 @@ public class CarbonJMXComponent {
 
             HashMap<String, Object> environment = new HashMap<>();
             environment.put(JMXConnectorServer.AUTHENTICATOR, new CarbonJMXAuthenticator());
+            environment.put("jmx.remote.x.access.file", ACCESS_FILE_PATH);
             environment.put(RMIConnectorServer.RMI_SERVER_SOCKET_FACTORY_ATTRIBUTE,
                     singleAddressRMIServerSocketFactory);
 

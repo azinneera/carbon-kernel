@@ -16,9 +16,15 @@
 package org.wso2.carbon.kernel.jmx.security;
 
 
+import org.slf4j.Logger;
 import org.wso2.carbon.kernel.Constants;
+import org.wso2.carbon.security.caas.api.exception.CarbonSecurityServerException;
+import org.wso2.carbon.security.caas.api.model.User;
+import org.wso2.carbon.security.caas.api.util.CarbonSecurityUtils;
 
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import javax.management.remote.JMXAuthenticator;
 import javax.management.remote.JMXPrincipal;
 import javax.security.auth.Subject;
@@ -26,12 +32,21 @@ import javax.security.auth.callback.CallbackHandler;
 import javax.security.auth.login.LoginContext;
 import javax.security.auth.login.LoginException;
 
+
+
 /**
  * Implementation class for JMXAuthenticator.
  *
  * @since 5.1.0
  */
 public class CarbonJMXAuthenticator implements JMXAuthenticator {
+
+    private static Logger audit = Constants.AUDIT_LOG;
+
+    private static final String JMX_MONITOR_ROLE = "monitorRole";
+    private static final String JMX_CONTROL_ROLE = "controlRole";
+    private static final String JMX_USER_READONLY_PERMISSION = "/permission/protected/server-admin/jmx/readonly";
+    private static final String JMX_USER_READWRITE_PERMISSION = "/permission/protected/server-admin/jmx/readwrite";
 
     @Override
     public Subject authenticate(Object credentials) {
@@ -44,13 +59,40 @@ public class CarbonJMXAuthenticator implements JMXAuthenticator {
         }
 
         CallbackHandler callbackHandler = new CarbonJMXCallbackHandler(credentials);
+
         try {
             LoginContext loginContext = new LoginContext(Constants.LOGIN_MODULE_ENTRY, callbackHandler);
             loginContext.login();
-            return new Subject(true, Collections.singleton(new JMXPrincipal(((String[]) credentials)[0])),
+
+            return new Subject(true, Collections.singleton(new JMXPrincipal(authorize(((String[]) credentials)[0]))),
                     Collections.EMPTY_SET, Collections.EMPTY_SET);
         } catch (LoginException e) {
             throw new SecurityException("Invalid credentials", e);
         }
     }
+
+    public String authorize(String username) throws CarbonSecurityServerException {
+
+        User user = CarbonSecurityUtils.getUser(username);
+        String strPermission = user.getPermission();
+        String roleName = null;
+        List<String> permissionList = Arrays.asList(strPermission.split(","));
+
+        if (permissionList.contains(JMX_USER_READWRITE_PERMISSION)) {
+            roleName = JMX_CONTROL_ROLE;
+        } else if (permissionList.contains(JMX_USER_READONLY_PERMISSION)) {
+            roleName = JMX_MONITOR_ROLE;
+        }
+
+        if (roleName != null) {
+            audit.info("User: " + username + " successfully authorized as " +
+                    roleName + " to perform JMX operations.");
+
+            return roleName;
+        } else {
+            throw new SecurityException("User: " + username + " not authorized to perform JMX operations.");
+        }
+
+    }
+
 }
