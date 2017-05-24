@@ -51,6 +51,7 @@ public class JMXServerManager {
     private static final String JMX_HOST_NAME         = "HostName";
     private static final String JMX_RMI_REGISTRY_PORT = "RMIRegistryPort";
     private static final String JMX_RMI_SERVER_PORT   = "RMIServerPort";
+    private static final String ACCESS_FILE_PATH = "../../jmxremote.access";
 
     private JMXConfig jmxProperties = new JMXConfig();
 
@@ -116,6 +117,7 @@ public class JMXServerManager {
             HashMap<String, CarbonJMXAuthenticator> env =
                 new HashMap<String, CarbonJMXAuthenticator>();
             env.put(JMXConnectorServer.AUTHENTICATOR, new CarbonJMXAuthenticator());
+            env.put("jmx.remote.x.access.file", ACCESS_FILE_PATH);
             jmxConnectorServer =
                 JMXConnectorServerFactory.newJMXConnectorServer(url, env, mbs);
             jmxConnectorServer.start();
