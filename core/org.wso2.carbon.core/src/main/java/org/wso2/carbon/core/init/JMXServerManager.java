@@ -32,6 +32,9 @@ import javax.management.MBeanServer;
 import javax.management.remote.JMXConnectorServer;
 import javax.management.remote.JMXConnectorServerFactory;
 import javax.management.remote.JMXServiceURL;
+import javax.management.remote.rmi.RMIConnectorServer;
+import javax.rmi.ssl.SslRMIClientSocketFactory;
+import javax.rmi.ssl.SslRMIServerSocketFactory;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
@@ -116,10 +119,18 @@ public class JMXServerManager {
             }
             JMXServiceURL url = new JMXServiceURL(jmxURL);
 
-            // Security credentials are included in the env Map
-            HashMap<String, CarbonJMXAuthenticator> env =
-                new HashMap<String, CarbonJMXAuthenticator>();
+            /// Security credentials are included in the env Map
+            HashMap<String, Object> env = new HashMap<String, Object>();
+            SslRMIClientSocketFactory csf = new SslRMIClientSocketFactory();
+            SslRMIServerSocketFactory ssf = new SslRMIServerSocketFactory();
+            env.put(RMIConnectorServer.RMI_CLIENT_SOCKET_FACTORY_ATTRIBUTE, csf);
+            env.put(RMIConnectorServer.RMI_SERVER_SOCKET_FACTORY_ATTRIBUTE, ssf);
+
+            String accessFilePath = CarbonUtils.getCarbonSecurityConfigDirPath() + File.separator + "jmxremote.access";
+
             env.put(JMXConnectorServer.AUTHENTICATOR, new CarbonJMXAuthenticator());
+            env.put("jmx.remote.x.access.file", accessFilePath);
+
             jmxConnectorServer =
                 JMXConnectorServerFactory.newJMXConnectorServer(url, env, mbs);
             jmxConnectorServer.start();
