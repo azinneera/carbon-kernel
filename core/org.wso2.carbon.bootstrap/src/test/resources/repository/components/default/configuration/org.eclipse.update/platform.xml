@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config date="1512497804148" transient="false">
+	<site updateable="true" url="platform:/base/" enabled="true" policy="USER-EXCLUDE">
+		<feature id="org.wso2.carbon.core.ui" version="4.4.19.SNAPSHOT" url="features/org.wso2.carbon.core.ui_4.4.19.SNAPSHOT/">
+		</feature>
+		<feature id="org.wso2.carbon.core.common" version="4.4.19.SNAPSHOT" url="features/org.wso2.carbon.core.common_4.4.19.SNAPSHOT/">
+		</feature>
+		<feature id="org.wso2.carbon.core" version="4.4.19.SNAPSHOT" url="features/org.wso2.carbon.core_4.4.19.SNAPSHOT/">
+		</feature>
+		<feature id="org.wso2.carbon.core.server" version="4.4.19.SNAPSHOT" url="features/org.wso2.carbon.core.server_4.4.19.SNAPSHOT/">
+		</feature>
+		<feature id="org.wso2.carbon.styles" version="4.4.19.SNAPSHOT" url="features/org.wso2.carbon.styles_4.4.19.SNAPSHOT/">
+		</feature>
+		<feature id="org.wso2.carbon.core.runtime" version="4.4.19.SNAPSHOT" url="features/org.wso2.carbon.core.runtime_4.4.19.SNAPSHOT/">
+		</feature>
+	</site>
+</config>
