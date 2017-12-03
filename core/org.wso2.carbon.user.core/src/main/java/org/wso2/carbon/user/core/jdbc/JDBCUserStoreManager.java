@@ -25,7 +25,6 @@ import org.wso2.carbon.context.CarbonContext;
 import org.wso2.carbon.user.api.Properties;
 import org.wso2.carbon.user.api.Property;
 import org.wso2.carbon.user.api.RealmConfiguration;
-import org.wso2.carbon.utils.Secret;
 import org.wso2.carbon.user.core.UserCoreConstants;
 import org.wso2.carbon.user.core.UserRealm;
 import org.wso2.carbon.user.core.UserStoreException;
@@ -40,14 +39,20 @@ import org.wso2.carbon.user.core.tenant.Tenant;
 import org.wso2.carbon.user.core.util.DatabaseUtil;
 import org.wso2.carbon.user.core.util.JDBCRealmUtil;
 import org.wso2.carbon.user.core.util.UserCoreUtil;
+import org.wso2.carbon.utils.Secret;
 import org.wso2.carbon.utils.UnsupportedSecretTypeException;
 import org.wso2.carbon.utils.dbcreator.DatabaseCreator;
 import org.wso2.carbon.utils.multitenancy.MultitenantConstants;
 
-import javax.sql.DataSource;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.sql.*;
+import java.security.SecureRandom;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.SQLTimeoutException;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
@@ -59,8 +64,8 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.security.SecureRandom;
 import java.util.Random;
+import javax.sql.DataSource;
 
 public class JDBCUserStoreManager extends AbstractUserStoreManager {
 
@@ -181,7 +186,7 @@ public class JDBCUserStoreManager extends AbstractUserStoreManager {
         }
         doInitialSetup();
         this.persistDomain();
-        if (realmConfig.isPrimary()) {
+        if (addInitData && realmConfig.isPrimary()) {
             addInitialAdminData(Boolean.parseBoolean(realmConfig.getAddAdmin()),
                     !isInitSetupDone());
         }
@@ -279,7 +284,7 @@ public class JDBCUserStoreManager extends AbstractUserStoreManager {
 
         this.persistDomain();
         doInitialSetup();
-        if (realmConfig.isPrimary()) {
+        if (!skipInitData && realmConfig.isPrimary()) {
             addInitialAdminData(Boolean.parseBoolean(realmConfig.getAddAdmin()),
                     !isInitSetupDone());
         }
@@ -2771,13 +2776,11 @@ public class JDBCUserStoreManager extends AbstractUserStoreManager {
             throw new IllegalArgumentException("Filter value cannot be null");
         }
         if (value.contains(QUERY_FILTER_STRING_ANY)) {
-            // This is to support LDAP like queries, so this will provide support for only leading or trailing '*'
-            // filters. if the query has multiple '*' s the filter will ignore all.
-                if ((value.startsWith(QUERY_FILTER_STRING_ANY) && !value.substring(1).contains(QUERY_FILTER_STRING_ANY)) ||
-                        value.endsWith(QUERY_FILTER_STRING_ANY) && !value.substring(0, value.length() - 1).contains(
-                                QUERY_FILTER_STRING_ANY) && value.charAt(value.length()-2) != SQL_FILTER_CHAR_ESCAPE) {
-                    value = value.replace(QUERY_FILTER_STRING_ANY, SQL_FILTER_STRING_ANY);
-                }
+            // This is to support LDAP like queries. Value having only * is restricted except one *.
+            if (!value.matches("(\\*)\\1+")) {
+                // Convert all the * to % except \*.
+                value = value.replaceAll("(?<!\\\\)\\*", SQL_FILTER_STRING_ANY);
+            }
         }
 
         String[] users = new String[0];
@@ -3156,10 +3159,17 @@ public class JDBCUserStoreManager extends AbstractUserStoreManager {
     protected RoleContext createRoleContext(String roleName) {
 
         JDBCRoleContext searchCtx = new JDBCRoleContext();
-        String[] roleNameParts = roleName.split(UserCoreConstants.TENANT_DOMAIN_COMBINER);
-        if (roleNameParts.length > 1 && (roleNameParts[1] == null || roleNameParts[1].equals("null"))) {
-            roleNameParts = new String[]{roleNameParts[0]};
+        String[] roleNameParts;
+
+        if (isSharedGroupEnabled()) {
+            roleNameParts = roleName.split(UserCoreConstants.TENANT_DOMAIN_COMBINER);
+            if (roleNameParts.length > 1 && (roleNameParts[1] == null || roleNameParts[1].equals("null"))) {
+                roleNameParts = new String[]{roleNameParts[0]};
+            }
+        } else {
+            roleNameParts = new String[]{roleName};
         }
+
         int tenantId = -1;
         if (roleNameParts.length > 1) {
             tenantId = Integer.parseInt(roleNameParts[1]);
