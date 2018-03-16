@@ -19,6 +19,7 @@ package org.wso2.carbon.core.clustering.hazelcast;
 
 import com.hazelcast.core.EntryEvent;
 import com.hazelcast.core.EntryListener;
+import com.hazelcast.core.HazelcastException;
 import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.IMap;
 import com.hazelcast.core.MapEvent;
@@ -138,32 +139,49 @@ public class HazelcastDistributedMapProvider implements DistributedMapProvider {
 
         @Override
         public V get(Object key) {
-            if (hazelcastInstance.getLifecycleService().isRunning()) {
-                return map.get(key);
+            try {
+                if (hazelcastInstance.getLifecycleService().isRunning()) {
+                    return map.get(key);
+                }
+            } catch (HazelcastException | NullPointerException e) {
+                log.debug(e);
             }
             return null;
         }
 
         @Override
         public V put(K key, V value) {
-            if (hazelcastInstance.getLifecycleService().isRunning()) {
-                map.set(key, value);
+            try {
+                if (hazelcastInstance.getLifecycleService().isRunning()) {
+                    map.set(key, value);
+                }
+            } catch (HazelcastException e) {
+                log.debug("Response timed out.", e);
             }
             return value;
         }
 
         @Override
         public V remove(Object key) {
-            if (hazelcastInstance.getLifecycleService().isRunning()) {
-                map.remove((K)key);
+            try {
+                if (hazelcastInstance.getLifecycleService().isRunning()) {
+                    map.remove((K)key);
+                }
+            } catch (HazelcastException e) {
+                log.debug(e);
             }
+
             return null;
         }
 
         @Override
         public void putAll(Map<? extends K, ? extends V> m) {
-            if (hazelcastInstance.getLifecycleService().isRunning()) {
-                map.putAll(m);
+            try {
+                if (hazelcastInstance.getLifecycleService().isRunning()) {
+                    map.putAll(m);
+                }
+            } catch (HazelcastException e) {
+                log.debug(e);
             }
         }
 
